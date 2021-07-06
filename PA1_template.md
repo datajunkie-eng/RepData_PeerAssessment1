@@ -4,24 +4,21 @@ output:
   html_document:
     keep_md: true
 ---
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
 
-library(xtable)
-library(dplyr)
-library(lubridate)
-library(ggplot2)
-
-options(scipen = 999)
-```
 
 ## Loading and preprocessing the data
 
-```{r loaddata,cache=TRUE}
+
+```r
 # Unzip data file and read in the csv
 unzip("activity.zip")
 data <-  tbl_df(read.csv("activity.csv")) %>%
            mutate(date=ymd(date))
+```
+
+```
+## Warning: `tbl_df()` was deprecated in dplyr 1.0.0.
+## Please use `tibble::as_tibble()` instead.
 ```
 
 
@@ -29,8 +26,8 @@ data <-  tbl_df(read.csv("activity.csv")) %>%
 
 Calculate total number of steps taken per day:
 
-```{r}
 
+```r
 per.day <- data %>%
            filter(!is.na(steps)) %>%
            group_by(date) %>%
@@ -38,39 +35,44 @@ per.day <- data %>%
 
 per.day.mean <- mean(per.day$steps)
 per.day.median <- median(per.day$steps)
-
 ```
 
 Histogram of total steps for any given day:
 
-```{r}
+
+```r
 hist(per.day$steps)
 ```
 
-The mean number of steps per day is `r per.day.mean`.  The median is `r per.day.median`.
+![](PA1_template_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
+
+The mean number of steps per day is 10766.1886792.  The median is 10765.
   
 
 ## What is the average daily activity pattern?
 
 Compare 5-minute the average number of steps taken for each time interval, averaged across all days
 
-```{r}
+
+```r
 per.slice <- data %>%
     filter(!is.na(steps)) %>%
     group_by(interval) %>%
     summarize(mean=mean(steps))
 
 plot(per.slice$interval, per.slice$mean)
-
 ```
 
-The 5 minute interval with the maximum average number of steps is `r per.slice[which.max(per.slice$mean), 1]`.
+![](PA1_template_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
+The 5 minute interval with the maximum average number of steps is 835.
 
 
 
 ## Imputing missing values
 
-```{r}
+
+```r
 complete.data <-  complete.cases(data)
 
 total.rows <- dim(data)[1]
@@ -78,10 +80,11 @@ complete.rows <- sum(complete.data)
 incomplete.rows <- total.rows - complete.rows
 ```
 
-Of `r total.rows` rows, `r complete.rows` were complete and `r incomplete.rows` had missing values.
+Of 17568 rows, 15264 were complete and 2304 had missing values.
 
 
-```{r}
+
+```r
 new.data <- inner_join(data, per.slice, by = "interval") %>%
                   mutate(steps=ifelse(is.na(steps), mean, steps)) %>%
                   select(steps,date, interval)
@@ -91,28 +94,39 @@ new.per.day <- new.data %>%
            summarize(steps=sum(steps))
 
 hist(new.per.day$steps)
-
-new.per.day.mean <- mean(new.per.day$steps)
-new.per.day.median <- median(new.per.day$steps)
-
 ```
 
-The mean after imputing data steps per day is `r new.per.day.mean` (vs. `r per.day.mean` before). This didn't change because we added values matching the existing mean for each 5 minute bucket, adding perfectly average days to the data.
+![](PA1_template_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
 
-The median after imputing data is `r new.per.day.median` (vs. `r per.day.median` before). This went up a little because the added data disproportionately displaced entries lower than the 50th percentile.
+```r
+new.per.day.mean <- mean(new.per.day$steps)
+new.per.day.median <- median(new.per.day$steps)
+```
+
+The mean after imputing data steps per day is 10766.1886792 (vs. 10766.1886792 before). This didn't change because we added values matching the existing mean for each 5 minute bucket, adding perfectly average days to the data.
+
+The median after imputing data is 10766.1886792 (vs. 10765 before). This went up a little because the added data disproportionately displaced entries lower than the 50th percentile.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
-```{r}
+
+```r
 per.slice <- data %>%
     filter(!is.na(steps)) %>%
     mutate(weekend=factor(ifelse(weekdays(date) %in% c("Saturday","Sunday"),"Weekend","Weekday"))) %>%
     group_by(weekend, interval) %>%
     summarize(mean=mean(steps))
+```
 
+```
+## `summarise()` has grouped output by 'weekend'. You can override using the `.groups` argument.
+```
+
+```r
 g <- ggplot(per.slice, aes(interval, mean))
 
 g + geom_line() + facet_grid(weekend ~ .) + xlab("Interval") + ylab("Number of steps")
-            
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
